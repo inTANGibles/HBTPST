@@ -289,7 +289,7 @@ class GridWorld_trajGen(GridWorld):
                         tt[4] += 1
                         break
                 ts.append([x1,y1,x2,y2,1])
-        grid_plot.ShowTraj(ts,self.width,self.height,title='复原轨迹')
+        grid_plot.ShowTraj(ts,self.width,self.height,title='Recovery track')
 
     def ShowTrajs_Experts(self):
         ts = [] # t0:x1,t1:y1,t3:x2,t4:y2,t5:counts
@@ -309,5 +309,5 @@ class GridWorld_trajGen(GridWorld):
                         tt[4] += 1
                         break
                 ts.append([x1,y1,x2,y2,1])
-        grid_plot.ShowTraj(ts,self.width,self.height,title='专家轨迹')
+        grid_plot.ShowTraj(ts,self.width,self.height,title='Expert trajectory')
                     
