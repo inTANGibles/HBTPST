@@ -47,13 +47,41 @@ The real-world data was collected and is stored in the `wifi_track_data/dacang` 
 
 
 ## 4. Steps to Reproduce Sections 3 "Simulation Experiments"
-- Figures 5 (b)(c), 6 (a)(b), and 8 (a) , Table 1 can be reproduced using demo_demirl.ipynb.
-- Figures 9 (A)(b) can be reproduced using demo_eval.ipynb.
-See the comments in the corresponding document for detailed steps.
+
+- Steps to Reproduce Figures 5(b)(c), 6(a)(b), 8(a), and Table 1
+    1. Open `demo_demirl.ipynb`.
+    2. Run the first three cells to Configuring the environment and importing data.
+    3. Run the code in **Cell [3]** to generate `Figures 5 (b)`.
+    4. Run the code in **Cell [4]** to generate `Table 1`.
+    5. Run the code in **Cell [5]** to generate `Figures 6 (a)(b)`.
+    6. Run the code in **Cell [6] [7] [8]** to generate `Figures 8 (a)`.
+
+- Steps to Reproduce Figures 9 (a)(b).
+    1. Open `demo_eval.ipynb`.
+    2. Run the first three cells to Configuring the environment and importing data.
+    3. Run the code in **Cell [4]** to generate `Figures 9 (a)`.
+    4. Run the code in **Cell [5]** to generate `Figures 9 (b)`.
+
 
 ## 5. Steps to Reproduce Sections 4 "Real-World Application"
-- Figures 10 (a)(b) can be reproduced using 1_Train_Data_Gen.ipynb.
-- Figures 13 (a)(b), 14(b) can be reproduced using 2_initialized_grid.ipynb.
-- Figures 15 (a) can be reproduced using 4_DMEIRL_eval.ipynb.
+
+- Steps to Reproduce Figures 10 (a)(b) 
+    1. Open `1_Train_Data_Gen.ipynb`.
+    2. Run the first three cells to Configuring the environment and importing data.Ensure the input data `dacang_track_data_final.csv` exists in the `df` directory.Ensure the input data `wifi_pos.csv` exists in the `df_wifipos` directory.Ensure the input data `path_pos.csv` exists in the `df_path` directory.
+    3. Run the code in **Cell [5] [6]** to generate `Figures 10 (a)`, which takes a particular mac(mac_list[283]) value for example.
+    4. Run the code in **Cell [11]** to generate `Figures 10 (b)`.
+
+- Steps to Reproduce Figures 13 (a)(b), 14(b) 
+    1. Open `2_initialized_grid.ipynb`.
+    2. Run the first three cells to Configuring the environment and importing data.Ensure the input data `env_imgs/40_30` exists in the `env_folder_path` directory.Ensure the input data `trajs_0117_40x30.csv` exists in the `expert_traj_path` directory.
+    3. Run the code in **Cell [5] [6]** to generate `Figures 14(b)`.
+    4. Run the code in **Cell [11] [14]** to generate `Figures 13 (a)(b)`.
+
+- Steps to Reproduce Figures 15 (a) 
+    1. Open `4_DMEIRL_eval.ipynb`.
+    2. Run the first two cells to Configuring the environment and using tanh to train the model.
+    3. Run all codes and the conclusion of DMEIRL to generate `Figures 15 (a)`
+
+
 - The analysis of the results and visualization of the trajectories are placed in `data_mining`
 See the comments in the corresponding document for detailed steps.
