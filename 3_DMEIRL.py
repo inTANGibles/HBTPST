@@ -6,7 +6,7 @@ from utils import utils
 #------------------------------------Initialize Grid World------------------------------------------
 
 env_folder_path = 'wifi_track_data/dacang/grid_data/env_imgs/40_30'
-expert_traj_path = "wifi_track_data/dacang/track_data/trajs_sliced_0229_40x30.csv"
+expert_traj_path = "wifi_track_data/dacang/track_data/trajs_sliced_40x30.csv"
 
 #env_folder_path = "wifi_track_data/dacang/grid_data/envs_grid/0117_40x30"
 #feature_folder_path = "wifi_track_data/dacang/grid_data/features_grid/0117_40x30"

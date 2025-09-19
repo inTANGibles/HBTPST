@@ -322,6 +322,10 @@ def GetPathPointsWithUniformDivide(df_now,df_wifipos,df_path):
     return all points with relevant uniform divide of the incoming df_now's path
     '''
     def _append_pos(df_wifipos,tracker,start_time,end_time):
+        matched_df = df_wifipos[df_wifipos.wifi == tracker]
+        if matched_df.empty:
+            return
+        first_row = matched_df.iloc[0]
         gap = 10/60
         inter_num = math.ceil((end_time-start_time)/gap)
         for i in range(1,inter_num):
@@ -331,8 +335,8 @@ def GetPathPointsWithUniformDivide(df_now,df_wifipos,df_path):
 
     def _append_path(df_path,start,end,start_time,end_time):
         path_points = _getPath(start,end,df_path)
-        
-        if len(path_points) == 0:
+
+        if path_points is None or len(path_points) == 0:
             return
         length = len(path_points)
         for i,point in enumerate(path_points):
