@@ -67,7 +67,16 @@ class DataParser:
                 pair[0] = grid_utils.CoordToState(pair[0],self.width)
             pairs_list.append(pairs)
         pairs_dict = dict(zip(mac_list, pairs_list))
-        df = pd.DataFrame({"m":mac_list,'trajs':pairs_list})
+        df_data = {"m": mac_list, 'trajs': pairs_list}
+        if 'cluster' in df.columns:
+            cluster_list = []
+            for m in mac_list:
+                cluster_val = df[df['m'] == m]['cluster'].iloc[0] if not df[df['m'] == m].empty else None
+                cluster_list.append(cluster_val)
+            df_data['cluster'] = cluster_list
+
+        df = pd.DataFrame(df_data)
+
         df.to_csv(f'wifi_track_data/dacang/track_data/trajs_{self.date}_{self.width}x{self.height}.csv',index=False)
         return df
     

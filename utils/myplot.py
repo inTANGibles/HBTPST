@@ -740,7 +740,7 @@ def Track2D_Restored(df,df_wifipos,df_path,
     for mac in mac_list:
         df_now = utils.GetDfNow(df,mac)
         _getPathAndStay(df_now,df_wifipos,df_path,pass_path,pass_count,stay_pos,stay_count)
-    
+
     if save_counts != '':
         folder_path = os.path.join('wifi_track_data/dacang/track_data/',str(date)+f'/{save_counts}')
         if not os.path.exists(folder_path):

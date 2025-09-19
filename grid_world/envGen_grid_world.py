@@ -43,8 +43,8 @@ class GridWorld_envGen(GridWorld):
         
         model = DeepMEIRL_FC(n_input=model_n_input,layers=model_layers)
         model.to(device)
-        # model.load_state_dict(torch.load(model_path,map_location='cuda:0'))
-        model.load_state_dict(torch.load(model_path,map_location='cup'))
+        model.load_state_dict(torch.load(model_path,map_location='cuda:0'))
+        # model.load_state_dict(torch.load(model_path,map_location='cup'))
         model.eval()
         model.cuda()
         self.model = model
