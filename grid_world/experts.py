@@ -94,25 +94,60 @@ class Experts:
         traj_y = np.array(traj_y)
         return np.mean(traj_x),np.mean(traj_y)
 
-    def ReadCluster(self,c_result):
+    def ReadCluster(self, c_result):
+        """
+        Map cluster results to expert trajectories.
+
+        Parameters:
+        c_result: DataFrame containing 'mac' and 'cluster' columns from cluster result file
+        """
+        # Create mapping dictionary from base ID to cluster
+        cluster_map = {}
+        for idx, row in c_result.iterrows():
+            mac_id = str(row['mac'])
+            cluster_map[mac_id] = row['cluster']
+
+        # Match cluster for each trajectory
         c = []
-        for i,r in self.df_trajs_all.iterrows():
-            if r['m'] in c_result.mac.tolist():
-                c.append(c_result[c_result.mac == r['m']].cluster.values[0])
+        for i, r in self.df_trajs_all.iterrows():
+            m_id = str(r['m'])
+            # Extract base ID (remove fragment number after +)
+            if '+' in m_id:
+                base_id = m_id.split('+')[0]
+            else:
+                base_id = m_id
+
+            if base_id in cluster_map:
+                c.append(cluster_map[base_id])
             else:
                 c.append(-1)
+
         self.df_trajs_all['cluster'] = c
         self.clusterReaded = True
 
+    def ApplyCluster(self, c_set):
+        """
+        Apply cluster filtering to select specific cluster groups.
 
-    def ApplyCluster(self,c_set):
-        '''
-        This function must called after the ReadCluster Function
-        c_set: indexes of applied clusters
-        '''
+        Parameters:
+        c_set: indexes of applied clusters to filter
+        """
         if not self.clusterReaded:
             raise ValueError("Must read cluster result first")
+
         self.df_trajs = self.df_trajs_all[self.df_trajs_all['cluster'].isin(c_set)].reset_index(drop=True)
         self.trajs = self.df_trajs['trajs'].tolist()
-        self.traj_avg_length = int(np.mean(self.df_trajs['trajs'].apply(lambda x:len(x))))+bias
-        print(f"applied clusterd trajs num: {len(self.df_trajs)}")
+
+        # Calculate average trajectory length for selected clusters
+        if len(self.df_trajs) == 0:
+            self.traj_avg_length = 0
+        else:
+            traj_lengths = self.df_trajs['trajs'].apply(
+                lambda x: len(x) if x is not None and isinstance(x, list) else 0)
+            mean_length = np.mean(traj_lengths)
+
+            if np.isnan(mean_length):
+                self.traj_avg_length = int(np.median(traj_lengths)) + self.bias
+            else:
+                self.traj_avg_length = int(mean_length) + self.bias
+

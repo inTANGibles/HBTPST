@@ -6,7 +6,7 @@ from utils import utils
 #------------------------------------Initialize Grid World------------------------------------------
 
 env_folder_path = 'wifi_track_data/dacang/grid_data/env_imgs/40_30'
-expert_traj_path = "wifi_track_data/dacang/track_data/trajs_sliced_40x30.csv"
+expert_traj_path = "wifi_track_data/dacang/track_data/trajs_sliced_0919_40x30.csv"
 
 
 world = GridWorld(
@@ -16,6 +16,7 @@ world = GridWorld(
 # Apply cluster
 df_cluster = pd.read_csv('wifi_track_data/dacang/cluster_data/cluster_result.csv')
 world.experts.ReadCluster(df_cluster)
+
 world.experts.ApplyCluster([0])
 print("GridWorld initialized")
 
@@ -25,7 +26,7 @@ dme = DMEIRL(world,layers=(60,120,240,120,60),lr=0.0001,weight_decay=0.2,log=f'{
 
 #------------------------------------Train------------------------------------------
 
-dme.train(n_epochs=500)
+dme.train(n_epochs=100)
 
 # layers_list = [(60,120,60),(60,240,60),(120,240,120),(60,120,240,120,60),(60,120,240,240,120,60)]
 # wd_list = [0.2,0.5,1]
