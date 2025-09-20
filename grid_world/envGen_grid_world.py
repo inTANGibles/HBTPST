@@ -40,7 +40,7 @@ class GridWorld_envGen(GridWorld):
                  ):
         self.width = width
         self.height = height
-        
+
         model = DeepMEIRL_FC(n_input=model_n_input,layers=model_layers)
         model.to(device)
         model.load_state_dict(torch.load(model_path,map_location='cuda:0'))
@@ -48,16 +48,16 @@ class GridWorld_envGen(GridWorld):
         model.eval()
         model.cuda()
         self.model = model
-        
+
         super().__init__(width=width,height=height,
                          environments_img_folderPath=envs_img_folder_path,
                          expert_traj_filePath=experts_traj_filePath,
                          trans_prob=trans_prob,
                          discount=discount)
-        
+
         #----parse original region environments----
         self.envs_arr_origin = self.parser.environments_arr #dim0: env type, dim1(2D): env value
-        
+
         #----calculate original svf & init_prob----
         self.prob_initial_state = self.__getInitialStatesProb()
         #self.SVF_origin = self.StateVisitationFrequency()
@@ -68,6 +68,16 @@ class GridWorld_envGen(GridWorld):
         if len(target_svf_delta)>0:
             self.SVF_target = self.GetTargetSVF(target_svf_delta)
             self.ShowSVF(self.SVF_target,'Target SVF')
+
+    def ShowInitialization(self):
+        # ----calculate original svf & init_prob----
+        self.prob_initial_state = self.__getInitialStatesProb()
+        # self.SVF_origin = self.StateVisitationFrequency()
+        self.SVF_origin_simu = self.Expected_StateVisitationFrequency(self.parser.environments_arr)
+        # self.ShowSVF(self.SVF_origin,'Original SVF')
+        self.ShowReward(self.reward_now)
+        self.ShowSVF(self.SVF_origin_simu, 'Simulated SVF')
+
 
     def GetTargetSVF(self,target_svf_delta:dict):
         target_svf = self.SVF_origin_simu.clone()

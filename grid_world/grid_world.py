@@ -20,8 +20,8 @@ class GridWorld:
                  features_folderPath = None,
                  states_features = None,
                  features_arr = None,#dim0:feature type, dim1:feature value
-                expert_traj_filePath = None,
-                expert_trajs = None,
+                 expert_traj_filePath = None,
+                 expert_trajs = None,
                  width = 100,height = 75,
                  trans_prob = 0.6,
                  discount = 0.98,

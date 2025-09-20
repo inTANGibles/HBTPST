@@ -6,18 +6,19 @@ from utils import utils
 #------------------------------------Initialize Grid World------------------------------------------
 
 env_folder_path = 'wifi_track_data/dacang/grid_data/env_imgs/40_30'
-expert_traj_path = "wifi_track_data/dacang/track_data/trajs_sliced_0919_40x30.csv"
+expert_traj_path = "wifi_track_data/dacang/cluster_data/trajs_sliced_0919_40x30_cluster1_2"
 
 
 world = GridWorld(
                   expert_traj_filePath=expert_traj_path,
                   environments_img_folderPath=env_folder_path,
                   width=40, height=30,discount=0.95,trans_prob=0.8)
-# Apply cluster
-df_cluster = pd.read_csv('wifi_track_data/dacang/cluster_data/cluster_result.csv')
-world.experts.ReadCluster(df_cluster)
 
-world.experts.ApplyCluster([0])
+# Apply cluster
+# df_cluster = pd.read_csv('wifi_track_data/dacang/cluster_data/cluster_result.csv')
+# world.experts.ReadCluster(df_cluster)
+# world.experts.ApplyCluster([0])
+# print(f"after experts_count: {len(world.experts.trajs)}")
 print("GridWorld initialized")
 
 #------------------------------------Initialize DMEIRL------------------------------------------
@@ -26,7 +27,7 @@ dme = DMEIRL(world,layers=(60,120,240,120,60),lr=0.0001,weight_decay=0.2,log=f'{
 
 #------------------------------------Train------------------------------------------
 
-dme.train(n_epochs=100)
+dme.train(n_epochs=500)
 
 # layers_list = [(60,120,60),(60,240,60),(120,240,120),(60,120,240,120,60),(60,120,240,240,120,60)]
 # wd_list = [0.2,0.5,1]
