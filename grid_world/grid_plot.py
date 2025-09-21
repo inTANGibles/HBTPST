@@ -37,18 +37,39 @@ im_z = np.zeros((300,400))
 
 colors = ['rgb(67,67,67)', 'rgb(115,115,115)']
 line_size = [2,2,2,2]
+BACKGROUND_IMAGE_PATH = r"..\wifi_track_data\dacang\imgs\roads_600x450.png"
 
-def ShowGridWorld(grid,width = 600,height = 450,title = "Grid World"):
+def ShowGridWorld(grid,width = 600,height = 450,title = "Grid World",vmin=None,vmax=None, background_image=None):
+    heatmap = go.Heatmap(z=grid, opacity=0.8)
+
     fig = go.Figure(data=go.Heatmap(
-                    z=grid,))
-
+                    z=grid,
+                    zmin=vmin,
+                    zmax=vmax,
+                    opacity=0.7
+    ))
+    fig.add_layout_image(
+        dict(
+            source=background_image,
+            xref="x",
+            yref="y",
+            x=0,
+            y=height,
+            sizex=width,
+            sizey=height,
+            sizing="stretch",
+            opacity=0.5,
+            layer="below"
+        )
+    )
     fig.update_layout(
         title=title,
         autosize=False,
         width=width,
         height=height,
         margin=dict(l=20, r=20, b=50, t=50),
-        
+        xaxis=dict(range=[0, width]),
+        yaxis=dict(range=[0, height])
     )
     fig.show()
 
@@ -237,9 +258,9 @@ def BarChart_3D(coords,z_data,thikness=3,width=600,height=600,title='BarChart 3D
     fig.update_coloraxes(showscale=False)
         
     fig.show()
-    
 
-def ShowGridWorlds(grids_dict,title = ''):
+
+def ShowGridWorlds(grids_dict,title = '', background_image=None):
     fig = make_subplots(rows=float.__ceil__(len(grids_dict)/4),
                         cols=4,
                         subplot_titles=list(grids_dict.keys()))
@@ -247,6 +268,22 @@ def ShowGridWorlds(grids_dict,title = ''):
         row_loc = int(i/4)+1
         col_loc = i%4+1
         fig.add_trace(go.Heatmap(z=grid),row=row_loc,col=col_loc)
+
+    fig.add_layout_image(
+        dict(
+            source=background_image,
+            xref=f"x{row_loc}{col_loc}" if len(grids_dict) > 1 else "x",
+            yref=f"y{row_loc}{col_loc}" if len(grids_dict) > 1 else "y",
+            x=0,
+            y=grid.shape[0],
+            sizex=grid.shape[1],
+            sizey=grid.shape[0],
+            sizing="stretch",
+            opacity=0.3,
+            layer="below"
+        )
+    )
+
     fig.update_layout(
         title=title,
         autosize=False,

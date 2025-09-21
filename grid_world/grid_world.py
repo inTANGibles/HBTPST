@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from utils import utils
-from grid_world import grid_utils,grid_plot
+from . import grid_utils, grid_plot
 from grid_world.data_parser import DataParser
 
 from grid_world.experts import Experts
@@ -261,7 +261,7 @@ class GridWorld:
                 features[i][coord[1],coord[0]] = f
         return features
     
-    def ShowReward(self,reward_arr):
+    def ShowReward(self,reward_arr,vmin=None, vmax=None):
         reward_grid = np.zeros((self.height,self.width))
         for i in range(len(reward_arr)):
             state = self.fid_state[i]
@@ -271,7 +271,14 @@ class GridWorld:
             for j in range(self.width):
                 if self.count_grid[i,j] == 0:
                     reward_grid[i,j] = np.nan
-        grid_plot.ShowGridWorld(reward_grid,500,400,title="Restored Rewards")
+        # 使用背景图片显示
+        grid_plot.ShowGridWorld(
+            reward_grid, 500, 400,
+            title="Restored Rewards",
+            vmin = vmin,
+            vmax = vmax,
+            background_image=grid_plot.BACKGROUND_IMAGE_PATH
+        )
 
 
     def ReadEnvironmentsFromFolder(self,folder_path):
@@ -400,13 +407,13 @@ class GridWorld:
             r.append(self.RewardsToMatrix(reward))
         grid_plot.ShowGridWorld_anime(r,480,400,title=title)
 
-    def ShowSVF(self,svf,title):
-        SVF_total = np.zeros((self.height,self.width))
+    def ShowSVF(self, svf, title, vmin=None, vmax=None):
+        SVF_total = np.zeros((self.height, self.width))
         for s in range(len(svf)):
             s_now = self.fid_state[s]
-            x,y = grid_utils.StateToCoord(s_now,self.width)
-            SVF_total[y,x] = svf[s]
-        grid_plot.ShowGridWorld(SVF_total,title=title)
+            x, y = grid_utils.StateToCoord(s_now, self.width)
+            SVF_total[y, x] = svf[s]
+        grid_plot.ShowGridWorld(SVF_total, title=title, vmin=0, vmax=1,background_image=grid_plot.BACKGROUND_IMAGE_PATH)
 
     def ShowGridValue(self,value,title):
         value_total = np.zeros((self.height,self.width))

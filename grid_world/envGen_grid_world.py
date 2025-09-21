@@ -63,20 +63,20 @@ class GridWorld_envGen(GridWorld):
         #self.SVF_origin = self.StateVisitationFrequency()
         self.SVF_origin_simu = self.Expected_StateVisitationFrequency(self.parser.environments_arr)
         #self.ShowSVF(self.SVF_origin,'Original SVF')
-        self.ShowReward(self.reward_now)
+        self.ShowReward(self.reward_now,0,1)
         self.ShowSVF(self.SVF_origin_simu,'Simulated SVF')
         if len(target_svf_delta)>0:
             self.SVF_target = self.GetTargetSVF(target_svf_delta)
             self.ShowSVF(self.SVF_target,'Target SVF')
 
-    def ShowInitialization(self):
-        # ----calculate original svf & init_prob----
-        self.prob_initial_state = self.__getInitialStatesProb()
-        # self.SVF_origin = self.StateVisitationFrequency()
-        self.SVF_origin_simu = self.Expected_StateVisitationFrequency(self.parser.environments_arr)
-        # self.ShowSVF(self.SVF_origin,'Original SVF')
-        self.ShowReward(self.reward_now)
-        self.ShowSVF(self.SVF_origin_simu, 'Simulated SVF')
+    # def ShowInitialization(self):
+    #     # ----calculate original svf & init_prob----
+    #     self.prob_initial_state = self.__getInitialStatesProb()
+    #     # self.SVF_origin = self.StateVisitationFrequency()
+    #     self.SVF_origin_simu = self.Expected_StateVisitationFrequency(self.parser.environments_arr)
+    #     # self.ShowSVF(self.SVF_origin,'Original SVF')
+    #     self.ShowReward(self.reward_now)
+    #     self.ShowSVF(self.SVF_origin_simu, 'Simulated SVF')
 
 
     def GetTargetSVF(self,target_svf_delta:dict):
