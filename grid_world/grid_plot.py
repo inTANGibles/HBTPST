@@ -46,7 +46,6 @@ def ShowGridWorld(grid,width = 600,height = 450,title = "Grid World",vmin=None,v
                     z=grid,
                     zmin=vmin,
                     zmax=vmax,
-                    opacity=0.7
     ))
     fig.add_layout_image(
         dict(
@@ -58,7 +57,6 @@ def ShowGridWorld(grid,width = 600,height = 450,title = "Grid World",vmin=None,v
             sizex=width,
             sizey=height,
             sizing="stretch",
-            opacity=0.5,
             layer="below"
         )
     )
@@ -68,8 +66,6 @@ def ShowGridWorld(grid,width = 600,height = 450,title = "Grid World",vmin=None,v
         width=width,
         height=height,
         margin=dict(l=20, r=20, b=50, t=50),
-        xaxis=dict(range=[0, width]),
-        yaxis=dict(range=[0, height])
     )
     fig.show()
 
@@ -279,7 +275,7 @@ def ShowGridWorlds(grids_dict,title = '', background_image=None):
             sizex=grid.shape[1],
             sizey=grid.shape[0],
             sizing="stretch",
-            opacity=0.3,
+            # opacity=0.3,
             layer="below"
         )
     )
@@ -354,26 +350,51 @@ def ShowDynamics(dynamic_track,dir,width,height,grid):
 
 def ShowTraj(track,width,height,title='traks'):
     fig = go.Figure()
+    counts = [t[4] for t in track]
+    min_count = min(counts)
+    max_count = max(counts)
+    # 将计数范围映射到1-20
+    def map_to_range(value, old_min, old_max, new_min, new_max):
+        if old_max == old_min:
+            return (new_min + new_max) / 2  # 如果所有值相同，返回中间值
+        return new_min + (value - old_min) * (new_max - new_min) / (old_max - old_min)
+
     for t in track:
         x = []
         y = []
-        
+
         x.append(t[0])
         y.append(t[1])
         x.append(t[2])
         y.append(t[3])
+        # 将当前轨迹段的计数映射到1-20范围
+        mapped_width = map_to_range(t[4], min_count, max_count,1,new_max=50)
         fig.add_trace(go.Scatter(x=x,y=y,mode='lines',
-                                 line=dict(color='red', width=t[4]/10)))
-        
+                                 line=dict(color='red', width=mapped_width)))
+
     fig.update_layout(
         title=title,
         autosize=False,
-        width=450,
-        height=450,
-        xaxis = dict(range=[0,width],
-                     showgrid = False),
-        yaxis = dict(range=[0,height],
-                     showgrid = False),
+        width=width,
+        height=height,
+        xaxis = dict(
+            range=[0,width],
+            showgrid=True,
+            # 增加以下参数使网格更密集
+            tickmode='linear',      # 线性刻度模式
+            dtick=10,               # x轴刻度间隔(可根据需要调整)
+            gridwidth=1,            # 网格线宽度
+            gridcolor='lightgray'   # 网格线颜色
+        ),
+        yaxis = dict(
+            range=[0,height],
+            showgrid=True,
+            # 增加以下参数使网格更密集
+            tickmode='linear',      # 线性刻度模式
+            dtick=10,               # y轴刻度间隔(可根据需要调整)
+            gridwidth=1,            # 网格线宽度
+            gridcolor='lightgray'   # 网格线颜色
+        ),
         showlegend=False,
         margin=dict(l=50, r=50, b=50, t=50),
     )

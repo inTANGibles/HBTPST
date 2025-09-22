@@ -172,12 +172,14 @@ class GridWorld_envGen(GridWorld):
         self.state = self.fid_state[index]
         return self.state
     
-    def GenerateTrajs(self,traj_count,traj_length,save = False):
+    def GenerateTrajs(self,traj_count,avg_length,save =True):
         reward = torch.from_numpy(self.reward_now).to('cuda:0')
         policy = value_iteration(0.0001,self,reward,self.discount).argmax(1)
         policy = policy.cpu().numpy()
         trajs = []
         for i in tqdm(range(traj_count)):
+            traj_length = max(1, int(np.random.normal(avg_length, 5)))
+            # traj_length = avg_length
             traj = []
             state = self.reset(random_init=False)
             for j in range(traj_length):
@@ -190,7 +192,7 @@ class GridWorld_envGen(GridWorld):
         m = np.array(range(1,(len(trajs)+1)))
         df_trajs = pd.DataFrame({'m':m,'trajs':trajs})
         if save:
-            df_trajs.to_csv(f'learned_trajs_{utils.date}.csv',index=False)
+            df_trajs.to_csv(f'wifi_track_data/dacang/learned_trajs/learned_trajs_{utils.date}.csv',index=False)
         self.df_trajs = df_trajs
         return df_trajs
     
@@ -208,8 +210,66 @@ class GridWorld_envGen(GridWorld):
                 y.append(coord[1])
                 t.append(i)
             grid_plot.PrintTraj3D(x,y,t)
-            
-    
+
+    def ShowTrajs(self, trajs_df=None, title='Trajectories'):
+        """
+        显示轨迹的可视化
+
+        参数:
+        trajs_df: 轨迹数据框，如果为None则使用self.df_trajs
+        title: 图表标题
+        """
+        if trajs_df is None:
+            if not hasattr(self, 'df_trajs'):
+                print("没有可用的轨迹数据")
+                return
+            trajs_df = self.df_trajs
+
+        ts = []  # t0:x1,t1:y1,t3:x2,t4:y2,t5:counts
+
+        trajs = trajs_df['trajs'].tolist()
+        for traj in trajs:
+            for i in range(len(traj) - 1):
+                t1 = traj[i]
+                t2 = traj[i + 1]
+                x1, y1 = self.StateToCoord(t1[0])
+                x2, y2 = self.StateToCoord(t2[0])
+                # x1 += 0.1
+                # y1 += 0.1
+                # x2 += 0.1
+                # y2 += 0.1
+
+                # 检查是否已存在相同的轨迹段
+                found = False
+                for tt in ts:
+                    if tt[0] == x1 and tt[1] == y1 and tt[2] == x2 and tt[3] == y2:
+                        tt[4] += 1
+                        found = True
+                        break
+                if not found:
+                    ts.append([x1, y1, x2, y2, 1])
+
+        grid_plot.ShowTraj(ts, self.width*15, self.height*15, title=title)
+
+
+    def ShowExpertTrajs(self):
+        """
+        显示专家轨迹
+        """
+        if hasattr(self, 'experts') and hasattr(self.experts, 'df_trajs'):
+            self.ShowTrajs(self.experts.df_trajs, title='Expert Trajectories')
+        else:
+            print("没有可用的专家轨迹数据")
+
+
+    def ShowLearnedTrajs(self):
+        """
+        显示学习到的轨迹
+        """
+        if hasattr(self, 'df_trajs'):
+            self.ShowTrajs(self.df_trajs, title='Learned Trajectories')
+        else:
+            print("没有可用的学习轨迹数据")
 
         
         
