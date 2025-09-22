@@ -171,10 +171,10 @@ class GridWorld_envGen(GridWorld):
         index = np.random.choice(self.n_states_active, p=probs)
         self.state = self.fid_state[index]
         return self.state
-    
-    def GenerateTrajs(self,traj_count,avg_length,save =True):
+
+    def GenerateTrajs(self, traj_count, avg_length, save=True):
         reward = torch.from_numpy(self.reward_now).to('cuda:0')
-        policy = value_iteration(0.0001,self,reward,self.discount).argmax(1)
+        policy = value_iteration(0.0001, self, reward, self.discount).argmax(1)
         policy = policy.cpu().numpy()
         trajs = []
         for i in tqdm(range(traj_count)):
@@ -184,15 +184,18 @@ class GridWorld_envGen(GridWorld):
             state = self.reset(random_init=False)
             for j in range(traj_length):
                 index = self.state_fid[state]
-                action = policy[index]
+                action = int(policy[index])  # 转换为普通整数
+                # 修改数据格式：从 (state, action, next_state) 转换为 [state, action]
+                traj.append([state, action])
                 next_state = self.step(action)
-                traj.append((state,action,next_state))
                 state = next_state
+            # 添加最后一个状态，使其与原始数据格式一致
+            traj.append([state, 0])  # 最后一个状态添加默认动作0
             trajs.append(traj)
-        m = np.array(range(1,(len(trajs)+1)))
-        df_trajs = pd.DataFrame({'m':m,'trajs':trajs})
+        m = np.array(range(1, (len(trajs) + 1)))
+        df_trajs = pd.DataFrame({'m': m, 'trajs': trajs})
         if save:
-            df_trajs.to_csv(f'wifi_track_data/dacang/learned_trajs/learned_trajs_{utils.date}.csv',index=False)
+            df_trajs.to_csv(f'wifi_track_data/dacang/learned_trajs/learned_trajs_{utils.date}.csv', index=False)
         self.df_trajs = df_trajs
         return df_trajs
     
