@@ -369,8 +369,10 @@ def ShowTraj(track,width,height,title='traks'):
         y.append(t[3])
         # 将当前轨迹段的计数映射到1-20范围
         mapped_width = map_to_range(t[4], min_count, max_count,1,new_max=50)
+        # fig.add_trace(go.Scatter(x=x,y=y,mode='lines',
+        #                          line=dict(color='red', width=mapped_width)))
         fig.add_trace(go.Scatter(x=x,y=y,mode='lines',
-                                 line=dict(color='red', width=mapped_width)))
+                                 line=dict(color='red', width=t[4]/100)))
 
     fig.update_layout(
         title=title,
