@@ -1,7 +1,7 @@
 import pandas as pd
 from grid_world.grid_world import GridWorld
 from DMEIRL.DeepMEIRL_FC import DMEIRL
-from utils import utils
+from utils_tool import utils
 
 #------------------------------------Initialize Grid World------------------------------------------
 

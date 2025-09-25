@@ -5,7 +5,7 @@ from tqdm import tqdm
 from DMEIRL.value_iteration import value_iteration
 import numpy as np
 import os
-from utils import utils
+from utils_tool import utils
 from tensorboardX import SummaryWriter
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

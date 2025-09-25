@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 import numpy as np
 from PIL import Image
 import os
-from utils import utils
+from utils_tool import utils
 from grid_world import grid_utils
 from tqdm import tqdm
 import pandas as pd
@@ -19,7 +19,7 @@ import math
 import plotly.io as pio
 
 try:
-    img_path = os.getcwd()+'/wifi_track_data/dacang/imgs/roads.png'
+    img_path ='D:/TangYe/HBTPST/wifi_track_data/dacang/imgs/roads.png'
     img = Image.open(img_path)
     background_img = img
     buttom_img = Image.fromarray(np.array(img.transpose(Image.FLIP_TOP_BOTTOM))).convert('P', palette='WEB', dither=None)

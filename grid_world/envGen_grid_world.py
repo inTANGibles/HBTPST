@@ -3,7 +3,7 @@ import numpy as np
 from grid_world.grid_world import GridWorld
 from grid_world.data_parser import DataParser
 from grid_world import grid_utils,grid_plot
-from utils import utils
+from utils_tool import utils
 from DMEIRL.value_iteration import value_iteration
 import torch
 import torch.nn as nn
