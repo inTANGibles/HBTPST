@@ -10,11 +10,9 @@ from datetime import datetime
 current_time = datetime.now()
 date = str(current_time.month)+str(current_time.day)
 
-track_data_path = "wifi_track_data/dacang/track_data/dacang_track_data_2_1217.csv"
-#track_data_path = r"wifi_track_data\dacang\track_data\dacang_track_data_3_epoch6_1217.csv"
-wifipos_path = 'wifi_track_data/dacang/pos_data/wifi_pos_origin.csv'
-#wifipos_path = r"wifi_track_data\dacang\pos_data\processing_data\wifiposNew_needRestore_3_epoch6_1217.csv"
-potential_wifipos_path = 'wifi_track_data/dacang/pos_data/potential_wifi_pos.csv'
+track_data_path = "../wifi_track_data/dacang/track_data/dacang_track_data_0925_filterd.csv"
+wifipos_path = '../wifi_track_data/dacang/pos_data/wifi_pos_origin.csv'
+
 
 df_poten = pd.read_csv('wifi_track_data/dacang/pos_data/potential_wifi_pos.csv')
 
