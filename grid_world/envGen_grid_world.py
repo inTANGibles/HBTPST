@@ -63,7 +63,7 @@ class GridWorld_envGen(GridWorld):
         #self.SVF_origin = self.StateVisitationFrequency()
         self.SVF_origin_simu = self.Expected_StateVisitationFrequency(self.parser.environments_arr)
         #self.ShowSVF(self.SVF_origin,'Original SVF')
-        self.ShowReward(self.reward_now,0,1)
+        self.ShowReward(self.reward_now,-1,1)
         # self.ShowSVF(self.SVF_origin_simu,'Simulated SVF')
         if len(target_svf_delta)>0:
             self.SVF_target = self.GetTargetSVF(target_svf_delta)
@@ -153,7 +153,7 @@ class GridWorld_envGen(GridWorld):
         return prob_initial_state
     
     #-------------------------traj--------------------------
-    def reset(self,random_init = True):
+    def reset(self,random_init = False):
         if random_init:
             index = np.random.randint(self.n_states_active)
             self.state = self.fid_state[index]
