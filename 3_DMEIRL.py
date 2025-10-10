@@ -23,11 +23,13 @@ print("GridWorld initialized")
 
 #------------------------------------Initialize DMEIRL------------------------------------------
 
-dme = DMEIRL(world,layers=(60,120,240,120,60),lr=0.0001,weight_decay=0.2,log=f'{utils.date}sliced_bias{world.traj_len_bias}_v0.001_tp{world.trans_prob}_dis{world.discount}',log_dir='run_sliced')
+dme = DMEIRL(world,layers=(64,128,256,128,64),lr=0.00075,weight_decay=0.25,log=f'{utils.date}sliced_bias{world.traj_len_bias}_v0.001_tp{world.trans_prob}_dis{world.discount}',log_dir='run_sliced')
 
-#------------------------------------Train------------------------------------------
+#------------------------------------Tr
+#
+# ain------------------------------------------
 
-dme.train(n_epochs=1000)
+dme.train(n_epochs=500)
 
 # layers_list = [(60,120,60),(60,240,60),(120,240,120),(60,120,240,120,60),(60,120,240,240,120,60)]
 # wd_list = [0.2,0.5,1]

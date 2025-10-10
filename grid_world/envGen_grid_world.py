@@ -63,8 +63,9 @@ class GridWorld_envGen(GridWorld):
         #self.SVF_origin = self.StateVisitationFrequency()
         self.SVF_origin_simu = self.Expected_StateVisitationFrequency(self.parser.environments_arr)
         #self.ShowSVF(self.SVF_origin,'Original SVF')
-        self.ShowReward(self.reward_now,-1,1)
-        # self.ShowSVF(self.SVF_origin_simu,'Simulated SVF')
+        self.ShowReward(self.reward_now,0,1)
+        self.ShowSVF(self.SVF_origin_simu,'Simulated SVF')
+        self.ShowSVFOrigin()
         if len(target_svf_delta)>0:
             self.SVF_target = self.GetTargetSVF(target_svf_delta)
             self.ShowSVF(self.SVF_target,'Target SVF')
@@ -172,47 +173,25 @@ class GridWorld_envGen(GridWorld):
         self.state = self.fid_state[index]
         return self.state
 
-    def GenerateTrajs(self, traj_count, avg_length, save=True):
+    def GenerateTrajs(self,traj_count,traj_length,save = False):
         reward = torch.from_numpy(self.reward_now).to('cuda:0')
-        policy = value_iteration(0.0001, self, reward, self.discount).argmax(1)
+        policy = value_iteration(0.0001,self,reward,self.discount).argmax(1)
         policy = policy.cpu().numpy()
         trajs = []
-
-        # 1) 用专家长度估计离散度 r（方法矩）
-        expert_lengths = np.array(self.experts.traj_all_lens, dtype=int)
-        expert_lengths = expert_lengths[expert_lengths > 0]
-        mu_exp = expert_lengths.mean()
-        var_exp = expert_lengths.var()
-        if var_exp > mu_exp:
-            r = (mu_exp ** 2) / (var_exp - mu_exp)  # 过度离散 → 合理 r
-        else:
-            r = 1e6  # 近似泊松（无过度离散）
-
-        # 2) 设定目标均值 = avg_length，并由 NB 的均值关系解出 p
-        mu = float(avg_length)
-        p = r / (r + mu)  # mean = r(1-p)/p = mu → p = r/(r+mu)
-
-        # 3) 长度上限：用专家的99.5分位截断，避免极端长尾
-        max_len = int(np.percentile(expert_lengths, 99.5)) if len(expert_lengths) > 0 else int(max(50, mu * 5))
-
         for i in tqdm(range(traj_count)):
-            traj_length = int(np.random.negative_binomial(r, p))
-            traj_length = int(np.clip(traj_length, 1, max_len))
-
             traj = []
             state = self.reset(random_init=False)
             for j in range(traj_length):
                 index = self.state_fid[state]
-                action = int(policy[index])
-                traj.append([state, action])
-                state = self.step(action)
-            traj.append([state, 0])  # 末尾补一个状态（动作置0）
+                action = policy[index]
+                next_state = self.step(action)
+                traj.append((state,action,next_state))
+                state = next_state
             trajs.append(traj)
-
-        m = np.array(range(1, (len(trajs) + 1)))
-        df_trajs = pd.DataFrame({'m': m, 'trajs': trajs})
+        m = np.array(range(1,(len(trajs)+1)))
+        df_trajs = pd.DataFrame({'m':m,'trajs':trajs})
         if save:
-            df_trajs.to_csv(f'wifi_track_data/dacang/learned_trajs/learned_trajs_{utils.date}.csv', index=False)
+            df_trajs.to_csv(f'learned_trajs_{utils.date}.csv',index=False)
         self.df_trajs = df_trajs
         return df_trajs
     

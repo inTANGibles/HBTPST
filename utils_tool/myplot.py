@@ -23,7 +23,7 @@ try:
     buttom_img = Image.fromarray(np.array(img.transpose(Image.FLIP_TOP_BOTTOM))).convert('P', palette='WEB', dither=None)
 except:
     print("no background image")
-    background_img = Image.fromarray(np.ones((300,400,3), dtype='uint8')).convert('P', palette='WEB')
+    background_img = Image.fromarray(np.ones((300,400,3), dtype='uint8')).convert('RGB''P', palette='WEB')
     buttom_img = Image.fromarray(np.ones((300,400,3), dtype='uint8')).convert('P', palette='WEB')
 
 dum_img = Image.fromarray(np.ones((3,3,3), dtype='uint8')).convert('P', palette='WEB')
