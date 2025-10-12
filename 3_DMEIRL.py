@@ -6,8 +6,8 @@ from utils_tool import utils
 #------------------------------------Initialize Grid World------------------------------------------
 
 env_folder_path = 'wifi_track_data/dacang/grid_data/env_imgs/40_30'
-expert_traj_path = "wifi_track_data/dacang/track_data/trajs_sliced_0925_40x30.csv"
-
+# expert_traj_path = "wifi_track_data/dacang/track_data/trajs_sliced_0925_40x30.csv"
+expert_traj_path = "wifi_track_data/dacang/cluster_data/trajs_sliced_cluster0_resident.csv"
 
 world = GridWorld(
                   expert_traj_filePath=expert_traj_path,
@@ -23,11 +23,9 @@ print("GridWorld initialized")
 
 #------------------------------------Initialize DMEIRL------------------------------------------
 
-dme = DMEIRL(world,layers=(64,128,256,128,64),lr=0.00075,weight_decay=0.25,log=f'{utils.date}sliced_bias{world.traj_len_bias}_v0.001_tp{world.trans_prob}_dis{world.discount}',log_dir='run_sliced')
+dme = DMEIRL(world,layers=(64,128,128,64),lr=0.00005,weight_decay=0.25,log=f'{utils.date}sliced_bias{world.traj_len_bias}_v0.001_tp{world.trans_prob}_dis{world.discount}',log_dir='run_sliced')
 
-#------------------------------------Tr
-#
-# ain------------------------------------------
+#------------------------------------Train------------------------------------------
 
 dme.train(n_epochs=500)
 
