@@ -1,6 +1,14 @@
 # Same defaults as ``3_DMEIRL.py`` — adjust paths to your machine.
 seed: 110
 
+split:
+  train_frac: 0.70
+  val_frac: 0.15
+
+training:
+  early_stop_patience: 20
+  min_epochs: 10
+
 paths:
   expert_csv: wifi_track_data/dacang/track_data/trajs_sliced_513_40x30.csv
   env_img_folder: wifi_track_data/dacang/grid_data/env_imgs/40_30
@@ -13,11 +21,9 @@ grid:
   traj_length_bias: 0
 
 bc:
-  epochs: 8
+  epochs: 100
   lr: 0.001
   batch_size: 256
-  train_frac: 0.8
-  val_frac: 0.1
   hidden: [128, 128]
 
 rollout:

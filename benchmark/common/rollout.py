@@ -41,3 +41,28 @@ def rollout_trajs(
             s = s2
         out.append(traj)
     return out
+
+
+def rollout_trajs_matched(
+    world,
+    action_fn: ActionFn,
+    expert_trajs: Sequence,
+    seed: int,
+) -> List[List[Tuple[int, int, int]]]:
+    """One rollout per expert trajectory, same start state and horizon length."""
+    rng = np.random.default_rng(seed)
+    out: List[List[Tuple[int, int, int]]] = []
+    for expert_traj in expert_trajs:
+        if not expert_traj:
+            continue
+        s = int(expert_traj[0][0])
+        if s not in world.state_fid:
+            s = sample_initial_state_from_experts(world, rng)
+        traj = []
+        for _t in range(len(expert_traj)):
+            a = int(action_fn(s))
+            s2 = step_stochastic(world, s, a, rng)
+            traj.append((s, a, s2))
+            s = s2
+        out.append(traj)
+    return out

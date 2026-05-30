@@ -50,7 +50,16 @@ def compare_svf_mse(svf1: np.ndarray, svf2: np.ndarray) -> float:
         return float(compare(t1, t2) * 100.0)
 
 
-def expected_state_visitation_frequency(world, policy_probs: np.ndarray) -> np.ndarray:
+def policy_svf_mse_on_trajs(world, policy_probs: np.ndarray, expert_trajs) -> float:
+    """MSE×100 between expert SVF on ``expert_trajs`` and expected SVF under policy."""
+    svf_e = empirical_svf_from_state_action_trajs(world, expert_trajs)
+    svf_exp = expected_state_visitation_frequency(world, policy_probs, expert_trajs=expert_trajs)
+    return compare_svf_mse(svf_e, svf_exp)
+
+
+def expected_state_visitation_frequency(
+    world, policy_probs: np.ndarray, expert_trajs=None
+) -> np.ndarray:
     """
     Expected state occupancy under ``policy_probs`` and ``world.dynamics_fid``,
     matching ``DMEIRL.DMEIRL.Expected_StateVisitationFrequency`` (empirical start
@@ -68,7 +77,7 @@ def expected_state_visitation_frequency(world, policy_probs: np.ndarray) -> np.n
     T = np.einsum("sa,sat->st", pi, P)
 
     prob0 = np.zeros(n, dtype=np.float64)
-    trajs = world.experts.trajs
+    trajs = expert_trajs if expert_trajs is not None else world.experts.trajs
     for traj in trajs:
         if not traj:
             continue

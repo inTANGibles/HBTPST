@@ -1,5 +1,13 @@
 seed: 110
 
+split:
+  train_frac: 0.70
+  val_frac: 0.15
+
+training:
+  early_stop_patience: 20
+  min_epochs: 10
+
 paths:
   expert_csv: wifi_track_data/dacang/track_data/trajs_sliced_513_40x30.csv
   env_img_folder: wifi_track_data/dacang/grid_data/env_imgs/40_30
@@ -12,11 +20,12 @@ grid:
   traj_length_bias: 0
 
 gail:
-  n_iters: 150
+  n_iters: 500
   n_d_steps: 2
   batch_size: 512
   rollout_trajs: 32
   rollout_horizon: 24
+  val_every: 10
   lr_policy: 0.0003
   lr_disc: 0.0003
   gamma: 0.95

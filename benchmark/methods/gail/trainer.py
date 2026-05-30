@@ -11,10 +11,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
-from benchmark.common import emd_metrics
+from benchmark.common import evaluation as EV
 from benchmark.common import metrics as M
-from benchmark.common import paper_metrics as PM
-from benchmark.common import rollout as R
+from benchmark.common.early_stop import EarlyStopper
+from benchmark.common.splits import TrainingConfig, resolve_split, save_split_artifact, trajs_at
 from benchmark.common.utils import build_grid_world, save_json, set_seed
 
 _device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -50,10 +50,11 @@ class DiscriminatorMLP(nn.Module):
         return self.net(x).squeeze(-1)
 
 
-def _expert_fa_tensors(world) -> Tuple[torch.Tensor, torch.Tensor]:
+def _expert_fa_tensors(world, trajs=None) -> Tuple[torch.Tensor, torch.Tensor]:
     feats: List[np.ndarray] = []
     acts: List[int] = []
-    for traj in world.experts.trajs:
+    source = trajs if trajs is not None else world.experts.trajs
+    for traj in source:
         for step in traj:
             if len(step) < 2:
                 continue
@@ -130,6 +131,11 @@ def train(config: Dict[str, Any], output_dir: Optional[Path] = None) -> Dict[str
     seed = int(config.get("seed", 110))
     set_seed(seed)
     world = build_grid_world(config)
+    split = resolve_split(world, config, seed)
+    train_trajs = trajs_at(world, split.train_idx)
+    val_trajs = trajs_at(world, split.val_idx)
+    tcfg = TrainingConfig.from_cfg(config)
+
     g = config.get("gail", {})
     n_feat = world.features_arr.shape[1]
     n_act = world.n_actions
@@ -147,6 +153,7 @@ def train(config: Dict[str, Any], output_dir: Optional[Path] = None) -> Dict[str
 
     out_dir = Path(output_dir or config["_output_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
+    save_split_artifact(out_dir / "traj_split.json", split, len(world.experts.trajs), seed)
 
     policy = PolicyMLP(n_feat, n_act, hidden_p).to(_device)
     disc = DiscriminatorMLP(n_feat + n_act, hidden_d).to(_device)
@@ -154,11 +161,17 @@ def train(config: Dict[str, Any], output_dir: Optional[Path] = None) -> Dict[str
     opt_d = torch.optim.Adam(disc.parameters(), lr=lr_d)
     bce = nn.BCEWithLogitsLoss()
 
-    F_exp, A_exp = _expert_fa_tensors(world)
+    F_exp, A_exp = _expert_fa_tensors(world, train_trajs)
     n_exp = F_exp.shape[0]
     rng = np.random.default_rng(seed)
+    stopper = EarlyStopper(tcfg.early_stop_patience, tcfg.min_epochs)
+    val_every = max(1, int(g.get("val_every", 10)))
 
-    for _ in range(n_iters):
+    best_val = float("inf")
+    best_policy_state = {k: v.detach().clone() for k, v in policy.state_dict().items()}
+    trained_iters = 0
+
+    for it in range(n_iters):
         # --- Discriminator: expert vs policy rollout ---
         for _ in range(n_d):
             idx_e = torch.from_numpy(rng.integers(0, n_exp, size=min(batch, n_exp))).long().to(_device)
@@ -215,7 +228,25 @@ def train(config: Dict[str, Any], output_dir: Optional[Path] = None) -> Dict[str
         loss_pi = -(logp * adv.detach()).mean() - ent_coef * ent
         loss_pi.backward()
         opt_pi.step()
+        trained_iters = it + 1
 
+        if (it + 1) % val_every == 0 or it + 1 == n_iters:
+            pol_tmp = _policy_matrix_argmax(policy, world)
+
+            def _tmp_action(s: int) -> int:
+                return int(pol_tmp[world.state_fid[int(s)]].argmax())
+
+            gen_val = EV.rollout_on_split(world, _tmp_action, split, partition="val", seed=seed + it)
+            svf_e = M.empirical_svf_from_state_action_trajs(world, val_trajs)
+            svf_g = M.empirical_svf_from_state_action_trajs(world, gen_val)
+            val_mse = M.compare_svf_mse(svf_e, svf_g)
+            if val_mse < best_val:
+                best_val = val_mse
+                best_policy_state = {k: v.detach().clone() for k, v in policy.state_dict().items()}
+            if stopper.step(val_mse, it):
+                break
+
+    policy.load_state_dict(best_policy_state)
     pol = _policy_matrix_argmax(policy, world)
     np.save(out_dir / "policy.npy", pol)
     torch.save(
@@ -223,54 +254,35 @@ def train(config: Dict[str, Any], output_dir: Optional[Path] = None) -> Dict[str
         out_dir / "gail.pt",
     )
 
-    ro = config.get("rollout", {})
-    horizon = int(ro["horizon"]) if ro.get("horizon") is not None else int(world.experts.traj_avg_length)
-    n_roll = int(ro["n_trajs"]) if ro.get("n_trajs") is not None else len(world.experts.trajs)
-
     def action_fn(s: int) -> int:
         return int(pol[world.state_fid[int(s)]].argmax())
 
-    gen = R.rollout_trajs(world, action_fn, n_roll, horizon, seed=seed + 77)
+    gen = EV.rollout_on_split(world, action_fn, split, partition="test", seed=seed + 77)
     with open(out_dir / "generated_trajectories.pkl", "wb") as f:
         pickle.dump(gen, f)
 
-    svf_exp = M.expert_state_visitation_frequency(world)
-    svf_gen = M.empirical_svf_from_state_action_trajs(world, gen)
-    svf_mse = M.compare_svf_mse(svf_exp, svf_gen)
-    emd_opts = config.get("svf_transport", {})
-    transport = emd_metrics.compare_svf_transport_distance(
+    extra = M.pack_metrics(
+        best_val_svf_mse=best_val,
+        stopped_iter=stopper.stopped_epoch,
+        trained_iters=trained_iters,
+    )
+    return EV.finalize_benchmark_run(
         world,
-        svf_exp,
-        svf_gen,
-        reg=float(emd_opts.get("sinkhorn_reg", 0.03)),
-        n_iter=int(emd_opts.get("sinkhorn_iter", 300)),
-    )
-    m = M.pack_metrics(
+        split,
+        gen,
         method="gail",
-        svf_mse_rollout_vs_expert=svf_mse,
-        sinkhorn_transport_cost=transport["sinkhorn_transport_cost"],
-        sinkhorn_reg=transport["sinkhorn_reg"],
-        n_iters=n_iters,
+        output_dir=out_dir,
+        extra=extra,
+        policy_active_probs=pol,
+        svf_transport_cfg=config.get("svf_transport"),
     )
-    if "exact_emd2_pot" in transport:
-        m["exact_emd2_pot"] = transport["exact_emd2_pot"]
-    m.update(
-        PM.build_paper_metric_dict(
-            world,
-            gen,
-            learned_reward_active=None,
-            policy_active_probs=pol,
-            svf_transport_cfg=config.get("svf_transport"),
-        )
-    )
-    save_json(out_dir / "metrics.json", m)
-    return {"metrics": m, "output_dir": str(out_dir)}
 
 
 def evaluate(config: Dict[str, Any], output_dir: Optional[Path] = None) -> Dict[str, Any]:
     seed = int(config.get("seed", 110))
     set_seed(seed)
     world = build_grid_world(config)
+    split = resolve_split(world, config, seed)
     out_dir = Path(output_dir or config.get("_output_dir", "."))
     ck = torch.load(out_dir / "gail.pt", map_location=_device)
     g = config.get("gail", {})
@@ -278,41 +290,17 @@ def evaluate(config: Dict[str, Any], output_dir: Optional[Path] = None) -> Dict[
     policy = PolicyMLP(int(ck["n_feat"]), int(ck["n_act"]), hidden_p).to(_device)
     policy.load_state_dict(ck["policy"])
     pol = _policy_matrix_argmax(policy, world)
-    ro = config.get("rollout", {})
-    horizon = int(ro["horizon"]) if ro.get("horizon") is not None else int(world.experts.traj_avg_length)
-    n_roll = int(ro["n_trajs"]) if ro.get("n_trajs") is not None else len(world.experts.trajs)
 
     def action_fn(s: int) -> int:
         return int(pol[world.state_fid[int(s)]].argmax())
 
-    gen = R.rollout_trajs(world, action_fn, n_roll, horizon, seed=seed + 78)
-    svf_exp = M.expert_state_visitation_frequency(world)
-    svf_gen = M.empirical_svf_from_state_action_trajs(world, gen)
-    svf_mse = M.compare_svf_mse(svf_exp, svf_gen)
-    emd_opts = config.get("svf_transport", {})
-    transport = emd_metrics.compare_svf_transport_distance(
+    gen = EV.rollout_on_split(world, action_fn, split, partition="test", seed=seed + 78)
+    m = EV.metrics_for_rollout(
         world,
-        svf_exp,
-        svf_gen,
-        reg=float(emd_opts.get("sinkhorn_reg", 0.03)),
-        n_iter=int(emd_opts.get("sinkhorn_iter", 300)),
-    )
-    m = M.pack_metrics(
-        method="gail",
-        svf_mse_rollout_vs_expert=svf_mse,
-        sinkhorn_transport_cost=transport["sinkhorn_transport_cost"],
-        sinkhorn_reg=transport["sinkhorn_reg"],
-    )
-    if "exact_emd2_pot" in transport:
-        m["exact_emd2_pot"] = transport["exact_emd2_pot"]
-    m.update(
-        PM.build_paper_metric_dict(
-            world,
-            gen,
-            learned_reward_active=None,
-            policy_active_probs=pol,
-            svf_transport_cfg=config.get("svf_transport"),
-        )
+        gen,
+        trajs_at(world, split.test_idx),
+        policy_active_probs=pol,
+        svf_transport_cfg=config.get("svf_transport"),
     )
     save_json(out_dir / "metrics_eval.json", m)
     return {"metrics": m, "output_dir": str(out_dir)}

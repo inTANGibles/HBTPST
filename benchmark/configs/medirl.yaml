@@ -1,5 +1,13 @@
 seed: 110
 
+split:
+  train_frac: 0.70
+  val_frac: 0.15
+
+training:
+  early_stop_patience: 20
+  min_epochs: 10
+
 paths:
   expert_csv: wifi_track_data/dacang/track_data/trajs_sliced_513_40x30.csv
   env_img_folder: wifi_track_data/dacang/grid_data/env_imgs/40_30

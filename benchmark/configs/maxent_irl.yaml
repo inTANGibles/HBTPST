@@ -1,5 +1,13 @@
 seed: 110
 
+split:
+  train_frac: 0.70
+  val_frac: 0.15
+
+training:
+  early_stop_patience: 20
+  min_epochs: 10
+
 paths:
   expert_csv: wifi_track_data/dacang/track_data/trajs_sliced_513_40x30.csv
   env_img_folder: wifi_track_data/dacang/grid_data/env_imgs/40_30
@@ -12,9 +20,9 @@ grid:
   traj_length_bias: 0
 
 maxent_irl:
-  n_epochs: 30
+  n_epochs: 200
   lr: 0.05
-  vi_demo: true   # set false for full VI loop (slower, same as DMEIRL training)
+  vi_demo: true
 
 rollout:
   horizon: null

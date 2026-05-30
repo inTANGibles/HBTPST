@@ -50,11 +50,11 @@ class DeepMEIRL_FC(nn.Module):
         return out
     
 class DMEIRL:
-    def __init__(self,world,layers = (50,30),load = "",lr = 0.001,weight_decay = 0.5,clip_norm = -1,log = '',log_dir = 'run'):
+    def __init__(self,world,layers = (50,30),load = "",lr = 0.001,weight_decay = 0.5,clip_norm = -1,log = '',log_dir = 'run', train_trajs=None):
         self.clip_norm = clip_norm
         
         self.world = world
-        self.trajs = world.experts.trajs
+        self.trajs = train_trajs if train_trajs is not None else world.experts.trajs
         self.features = torch.from_numpy(world.features_arr).float().to(device)
         
         #self.dynamics = torch.from_numpy(np.transpose(world.dynamics_fid,(2,1,0))).float().to(device)
@@ -74,7 +74,7 @@ class DMEIRL:
         if log != "":
             self.writer = SummaryWriter(f"./{log_dir}/DMEIRL_{self.info}")
 
-    def train(self,n_epochs, save = True, demo = False,showInfo = False):
+    def train(self,n_epochs, save = True, demo = False,showInfo = False, val_trajs=None, early_stop_patience=None, min_epochs=0, select_on_val=False):
         self.rewards = []
         svf = self.StateVisitationFrequency()
         com_last = 100
@@ -86,6 +86,10 @@ class DMEIRL:
 
         last_mse = 10000
         last_max = 10000
+        stopper = None
+        if val_trajs is not None and early_stop_patience is not None:
+            from benchmark.common.early_stop import EarlyStopper
+            stopper = EarlyStopper(int(early_stop_patience), min_epochs=int(min_epochs))
         
         for i in tqdm(range(n_epochs)):
             if not demo:
@@ -133,15 +137,27 @@ class DMEIRL:
             
 
             # best SVF MSE (always track); checkpoints only when save
-            if last_mse > mse:
+            score_mse = mse
+            if val_trajs is not None and select_on_val:
+                with torch.no_grad():
+                    pol_np = policy.detach().cpu().numpy()
+                from benchmark.common import metrics as _bm
+                score_mse = _bm.policy_svf_mse_on_trajs(self.world, pol_np, val_trajs)
+
+            if last_mse > score_mse:
                 if save:
-                    self.SyncModel_MinMse(i, mse)
-                last_mse = mse
+                    self.SyncModel_MinMse(i, score_mse)
+                last_mse = score_mse
                 best_reward = reward
                 best_iter = i
             if save and last_max > max:
                 self.SyncModel_MinMax(i, max)
                 last_max = max
+
+            if stopper is not None and stopper.step(float(score_mse), i):
+                if not demo:
+                    print(f"Early stop at epoch {i + 1}, best val SVF MSE={last_mse:.4f}")
+                break
 
             with torch.no_grad():
                 reward = self.model.forward(self.features).flatten()
@@ -168,8 +184,6 @@ class DMEIRL:
                 prob_initial_state[index] += 1
             prob_initial_state = prob_initial_state/self.world.experts.trajs_count
 
-            #Compute 𝜇
-            d = torch.from_numpy(np.transpose(self.world.dynamics_fid,(2,1,0))).float().to(device)
             mu = prob_initial_state.repeat(self.world.experts.traj_avg_length,1)
             x = (policy[:,:,np.newaxis]*self.dynamics).sum(1)
             for t in range(1,self.world.experts.traj_avg_length):

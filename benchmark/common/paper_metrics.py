@@ -98,6 +98,7 @@ def build_paper_metric_dict(
     learned_reward_active: Optional[np.ndarray] = None,
     policy_active_probs: Optional[np.ndarray] = None,
     svf_transport_cfg: Optional[Dict[str, Any]] = None,
+    expert_trajs: Optional[Sequence] = None,
 ) -> Dict[str, float]:
     """
     Paper-style metrics. **R² / RMSE / EVD** compare expert empirical SVF to **expected SVF**
@@ -107,7 +108,10 @@ def build_paper_metric_dict(
     **Reward_Corr** (optional) still uses ``world.real_reward_arr`` vs learned reward when both exist.
     """
     out: Dict[str, float] = {}
-    svf_e = M.expert_state_visitation_frequency(world)
+    if expert_trajs is not None:
+        svf_e = M.empirical_svf_from_state_action_trajs(world, expert_trajs)
+    else:
+        svf_e = M.expert_state_visitation_frequency(world)
     svf_g = M.empirical_svf_from_state_action_trajs(world, gen_trajs)
     if svf_g.sum() > 0 or svf_e.sum() > 0:
         out["SVF_KL"] = svf_kl_symmetric(svf_e, svf_g)
@@ -138,7 +142,9 @@ def build_paper_metric_dict(
             pi_model = pol
 
     if pi_model is not None:
-        svf_exp = M.expected_state_visitation_frequency(world, pi_model)
+        svf_exp = M.expected_state_visitation_frequency(
+            world, pi_model, expert_trajs=expert_trajs
+        )
         out["R2"] = r2_np(svf_e, svf_exp)
         out["RMSE"] = rmse_np(svf_e, svf_exp)
         out["EVD"] = svf_mean_abs_error(svf_e, svf_exp)
