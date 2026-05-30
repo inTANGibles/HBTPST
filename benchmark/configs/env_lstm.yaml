@@ -1,0 +1,34 @@
+# Environment-conditioned LSTM (same paths / grid / features_arr as BC).
+seed: 110
+
+paths:
+  expert_csv: wifi_track_data/dacang/track_data/trajs_sliced_513_40x30.csv
+  env_img_folder: wifi_track_data/dacang/grid_data/env_imgs/40_30
+
+grid:
+  width: 40
+  height: 30
+  discount: 0.95
+  trans_prob: 0.8
+  traj_length_bias: 0
+
+env_lstm:
+  seq_len: 8
+  hidden: 128
+  n_layers: 1
+  epochs: 15
+  lr: 0.001
+  batch_size: 256
+  train_frac: 0.8
+  val_frac: 0.1
+
+rollout:
+  horizon: null
+  n_trajs: null
+
+svf_transport:
+  sinkhorn_reg: 0.03
+  sinkhorn_iter: 300
+
+output:
+  root: benchmark/outputs

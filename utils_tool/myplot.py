@@ -5,26 +5,37 @@ pio.templates.default = 'plotly_white'
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+from pathlib import Path
 from PIL import Image
 import os
 from utils_tool import utils
 import matplotlib
 from tqdm import tqdm
 import pandas as pd
+import warnings
 from datetime import datetime
 current_time = datetime.now()
 date = str(current_time.month)+str(current_time.day)
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_ROADS_IMG = _REPO_ROOT / "wifi_track_data" / "dacang" / "imgs" / "roads.png"
+
 try:
-    img_path ='D:/TangYe/HBTPST/wifi_track_data/dacang/imgs/roads.png'
+    img_path = Path(os.environ.get("HBTP_ROADS_IMAGE", _DEFAULT_ROADS_IMG))
+    if not img_path.is_file():
+        raise FileNotFoundError(img_path)
     img = Image.open(img_path)
-    # Image._show(img)
-    background_img = img
-    buttom_img = Image.fromarray(np.array(img.transpose(Image.FLIP_TOP_BOTTOM))).convert('P', palette='WEB', dither=None)
-except:
-    print("no background image")
-    background_img = Image.fromarray(np.ones((300,400,3), dtype='uint8')).convert('RGB''P', palette='WEB')
-    buttom_img = Image.fromarray(np.ones((300,400,3), dtype='uint8')).convert('P', palette='WEB')
+    background_img = img.convert("RGB")
+    buttom_img = Image.fromarray(
+        np.array(background_img.transpose(Image.FLIP_TOP_BOTTOM))
+    ).convert("P", palette="WEB", dither=None)
+except (FileNotFoundError, OSError) as e:
+    print(f"no background image ({e}); using blank placeholder")
+    arr = np.ones((300, 400, 3), dtype=np.uint8) * 255
+    background_img = Image.fromarray(arr).convert("RGB")
+    buttom_img = Image.fromarray(
+        np.array(background_img.transpose(Image.FLIP_TOP_BOTTOM))
+    ).convert("P", palette="WEB", dither=None)
 
 dum_img = Image.fromarray(np.ones((3,3,3), dtype='uint8')).convert('P', palette='WEB')
 idx_to_color = np.array(dum_img.getpalette()).reshape((-1, 3))
@@ -658,14 +669,36 @@ def Track3D_Origin(df_now,df_wifiPos):
     x,y,z = GetOriginXYZ(df_now,df_wifiPos)
     Track_3D(x,y,z)
 
+def _wifi_match_rows(df_wifiPos, ap):
+    """Match trajectory AP id to wifipos row (handles int/float/str mismatch)."""
+    wifi = df_wifiPos["wifi"]
+    hit = df_wifiPos.loc[wifi == ap]
+    if len(hit):
+        return hit
+    hit = df_wifiPos.loc[wifi.astype(str) == str(ap).strip()]
+    if len(hit):
+        return hit
+    apn = pd.to_numeric(pd.Series([ap]), errors="coerce").iloc[0]
+    wn = pd.to_numeric(wifi, errors="coerce")
+    if pd.notna(apn):
+        hit = df_wifiPos.loc[wn == apn]
+        if len(hit):
+            return hit
+    return df_wifiPos.iloc[0:0]
+
 def GetOriginXYZ(df_now,df_wifiPos):
     z = []
     x = []
     y = []
     for index,row in df_now.iterrows():
+        rows = _wifi_match_rows(df_wifiPos, row.a)
+        if rows.empty:
+            warnings.warn(f"探针 {row.a!r} 不在 df_wifipos 中，已跳过该轨迹点", stacklevel=2)
+            continue
+        pt = rows.iloc[0]
         z.append(row.t.hour+(row.t.minute/60))
-        x.append(df_wifiPos[df_wifiPos.wifi == row.a].iloc[0].X)
-        y.append(df_wifiPos[df_wifiPos.wifi == row.a].iloc[0].Y)
+        x.append(pt.X)
+        y.append(pt.Y)
     return x,y,z
 
 def Track3D_Virtual(df_now,df_wifiPos):
@@ -677,9 +710,14 @@ def GetVirtualXYZ(df_now,df_wifiPos):
     x = []
     y = []
     for index,row in df_now.iterrows():
+        rows = _wifi_match_rows(df_wifiPos, row.a)
+        if rows.empty:
+            warnings.warn(f"探针 {row.a!r} 不在 df_wifipos 中，已跳过该轨迹点", stacklevel=2)
+            continue
+        pt = rows.iloc[0]
         z.append(row.t.hour+(row.t.minute/60))
-        x.append(df_wifiPos[df_wifiPos.wifi == row.a].iloc[0].restored_x)
-        y.append(df_wifiPos[df_wifiPos.wifi == row.a].iloc[0].restored_y)
+        x.append(pt.restored_x)
+        y.append(pt.restored_y)
     return x,y,z
 
 
@@ -711,18 +749,19 @@ def _getPathAndStay(df_now,df_wifipos,df_path,pass_path,pass_count,stay_pos,stay
         #place changed
         else:
             paths = utils._getPath(wifi_last,row.a,df_path)
-            last_loc = 0
-            for i in range(len(paths)):
-                loc_str = paths[i].split(':')
-                loc = [float(loc_str[0]),float(loc_str[1])]
-                if i == 0:
+            if paths:
+                last_loc = 0
+                for i in range(len(paths)):
+                    loc_str = paths[i].split(':')
+                    loc = [float(loc_str[0]),float(loc_str[1])]
+                    if i == 0:
+                        last_loc = loc
+                        continue
+                    path = [last_loc,loc]
+                    if _addTrackCount(pass_path,pass_count,path) == False:
+                        pass_path.append(path)
+                        pass_count.append(1)
                     last_loc = loc
-                    continue
-                path = [last_loc,loc]
-                if _addTrackCount(pass_path,pass_count,path) == False:
-                    pass_path.append(path)
-                    pass_count.append(1)
-                last_loc = loc
             wifi_last = row.a
 
 def Track2D_Restored(df,df_wifipos,df_path,
@@ -772,51 +811,59 @@ def Track_2D(pass_path,
              save_fig = ''):
 
     fig = go.Figure()
-    if pass_count != None:
-        if not absolute:
-            # normalize counts
-            if max(pass_count)>10:
-                pass_count = utils.Normalize_arr(pass_count)
-                min_pass_count = min(pass_count) if min(pass_count)>0.1 else 0.1
-                pass_count = (1/min_pass_count)*pass_count
-            else:
-                pass_count = np.array(pass_count)/max(pass_count)
-            if len(stay_count) == 1:
-                stay_count.append(1)
-                stay_count = utils.Normalize_arr(stay_count)*8
-                stay_count = stay_count[:1]
-            elif len(stay_count) > 1:
-                stay_count = utils.Normalize_arr(stay_count)*8
-        else:
-            pass_count = np.array(pass_count)/10
-            stay_count = np.array(stay_count)/10
+    has_move = pass_count is not None and len(pass_count) > 0
+    has_stay = stay_count is not None and len(stay_count) > 0
 
-        #add move trace
-        for i, path in enumerate(pass_path):
-            xx = [path[0][0], path[1][0]]
-            yy = [path[0][1], path[1][1]]
-            fig.add_trace(go.Scatter(
-                x=xx, y=yy,
-                line=dict(color='firebrick', width=pass_count[i]),
-                showlegend=False,
-                mode='lines',
-            ))
-        
-        
-        if len(stay_count)>0 :
-            #add stay trace
+    if has_move or has_stay:
+        if not absolute:
+            if has_move:
+                if max(pass_count) > 10:
+                    pass_count = utils.Normalize_arr(pass_count)
+                    min_pass_count = min(pass_count) if min(pass_count) > 0.1 else 0.1
+                    pass_count = (1 / min_pass_count) * pass_count
+                else:
+                    m = max(pass_count)
+                    pass_count = np.array(pass_count) / m if m else np.array(pass_count, dtype=float)
+            if has_stay:
+                if len(stay_count) == 1:
+                    stay_count = list(stay_count)
+                    stay_count.append(1)
+                    stay_count = utils.Normalize_arr(stay_count) * 8
+                    stay_count = stay_count[:1]
+                elif len(stay_count) > 1:
+                    stay_count = utils.Normalize_arr(stay_count) * 8
+        else:
+            if has_move:
+                pass_count = np.array(pass_count) / 10
+            if has_stay:
+                stay_count = np.array(stay_count) / 10
+
+        if has_move:
+            for i, path in enumerate(pass_path):
+                xx = [path[0][0], path[1][0]]
+                yy = [path[0][1], path[1][1]]
+                fig.add_trace(go.Scatter(
+                    x=xx, y=yy,
+                    line=dict(color='firebrick', width=pass_count[i]),
+                    showlegend=False,
+                    mode='lines',
+                ))
+
+        if has_stay:
             xx = []
             yy = []
-            for i,pos in enumerate(stay_pos):
+            for i, pos in enumerate(stay_pos):
                 xx.append(pos[0])
                 yy.append(pos[1])
             fig.add_trace(
-                go.Scatter(x = xx,y = yy,
-                            marker_size = stay_count,
-                        mode="markers",
-                        marker_line_color = "firebrick",
-                        marker_color = "firebrick",
-                        showlegend=False)
+                go.Scatter(
+                    x=xx, y=yy,
+                    marker_size=stay_count,
+                    mode="markers",
+                    marker_line_color="firebrick",
+                    marker_color="firebrick",
+                    showlegend=False,
+                )
             )
     if not pureMode:
         fig.update_layout(
@@ -867,7 +914,11 @@ def Track_2D(pass_path,
             
         )
     if save_fig != '':
-        fig.write_image(save_fig, engine='orca')
+        save_dir = os.path.dirname(save_fig)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        # Default engine is kaleido (pip install kaleido); orca is often unavailable.
+        fig.write_image(save_fig)
     #pio.write_image(fig,'111.jpg')
     if showfig:
         fig.show()

@@ -47,8 +47,9 @@ class GridWorld:
                 self.experts = Experts(self.width,self.height,trajs_file_path=expert_traj_filePath,bias=traj_length_bias)
             elif any(expert_trajs):
                 self.experts = Experts(self.width,self.height,df_trajs=expert_trajs,bias = traj_length_bias)
-        except:
-            pass
+        except Exception as e:
+            print(f"[GridWorld] Experts 初始化失败: {e}")
+            raise
              
         #print("experts didn't initialize")
 

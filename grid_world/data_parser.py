@@ -47,6 +47,10 @@ class DataParser:
         np.save(f'wifi_track_data/dacang/grid_data/count_grid_{self.date}.npy',self.count_grid)
 
     def PathToStateActionPairs(self,df,scale = 1):
+        '''
+        格坐标为 floor(x*scale), floor(y*scale)。地图范围不变、仅加密网格时，scale 需与 width/height 同比
+        （例如 40x30 用 0.1 则 80x60 常用约 0.2）。
+        '''
         mac_list = df.m.unique()
         state_list = []
         for m in tqdm(mac_list):
@@ -79,7 +83,52 @@ class DataParser:
 
         df.to_csv(f'wifi_track_data/dacang/track_data/trajs_{self.date}_{self.width}x{self.height}.csv',index=False)
         return df
-    
+
+    def PathToStateActionPairsXY(self, df, scale=1):
+        """
+        State–action pairs from dense XY columns (m, x, y, seq), e.g. IF-filtered restored tracks.
+        Grid coords: floor(x*scale), floor(y*scale). Bresenham between consecutive samples; no df_path / probe interpolation.
+        Trajectories with fewer than 2 grid steps are skipped.
+        """
+        mac_list = df.m.unique()
+        m_out = []
+        pairs_list = []
+        for m in tqdm(mac_list, desc="PathXY->SA"):
+            df_now = df[df.m == m].sort_values("seq")
+            xs = df_now["x"].to_numpy(dtype=float)
+            ys = df_now["y"].to_numpy(dtype=float)
+            state = []
+            for i in range(len(xs) - 1):
+                point1 = (math.floor(xs[i] * scale), math.floor(ys[i] * scale))
+                point2 = (math.floor(xs[i + 1] * scale), math.floor(ys[i + 1] * scale))
+                state.extend(grid_utils.GetPathCorList(self.count_grid, point1, point2))
+            if len(state) < 2:
+                continue
+            pairs = grid_utils.StatesToStateActionPairs(state)
+            if not pairs:
+                continue
+            for pair in pairs:
+                pair[0] = grid_utils.CoordToState(pair[0], self.width)
+            m_out.append(m)
+            pairs_list.append(pairs)
+
+        print("Converting XY paths to state action pairs...")
+        df_data = {"m": m_out, "trajs": pairs_list}
+        if "cluster" in df.columns:
+            cluster_list = []
+            for m in m_out:
+                sub = df[df["m"] == m]
+                cluster_val = sub["cluster"].iloc[0] if not sub.empty else None
+                cluster_list.append(cluster_val)
+            df_data["cluster"] = cluster_list
+
+        out_df = pd.DataFrame(df_data)
+        out_df.to_csv(
+            f"wifi_track_data/dacang/track_data/trajs_{self.date}_{self.width}x{self.height}.csv",
+            index=False,
+        )
+        return out_df
+
     def ParseEnvironmentFromFolder(self,folder_path):
         file_names = os.listdir(folder_path)
         imgs = []

@@ -1,8 +1,15 @@
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).parent / ".."  # 项目根，相对本脚本，不依赖 cwd
+_DACANG = _REPO_ROOT / "wifi_track_data" / "dacang"
+sys.path.insert(0, str(_REPO_ROOT))
+
 import pandas as pd
 import numpy as np
 import os
 from tqdm import tqdm
-from utils_tool import utils,TrackCleaner
+from utils_tool import utils, TrackCleaner
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -10,14 +17,17 @@ from datetime import datetime
 current_time = datetime.now()
 date = str(current_time.month)+str(current_time.day)
 
-track_data_path = "../wifi_track_data/dacang/track_data/dacang_track_data_0925_filterd.csv"
-wifipos_path = '../wifi_track_data/dacang/pos_data/wifi_pos_origin.csv'
+track_data_path = _DACANG / "track_data" / "dacang_track_data_0508_filterd.csv"
+wifipos_path = _DACANG / "pos_data" / "wifi_pos_origin.csv"
 
 
-df_poten = pd.read_csv('../wifi_track_data/dacang/pos_data/potential_wifi_pos.csv')
+df_poten = pd.read_csv(_DACANG / "pos_data" / "potential_wifi_pos.csv")
 
 df = pd.read_csv(track_data_path)
 df.t = pd.to_datetime(df.t)
+# 早期轨迹仅有 a,r,t,m；带前缀的脚本仍使用 oriMac 列（与清洗后 csv 一致）
+if "oriMac" not in df.columns:
+    df["oriMac"] = df["m"].astype(str)
 df_wifipos = pd.read_csv(wifipos_path)
 df_wifipos['parents'] = ["N"]*len(df_wifipos)
 df_wifipos['ID'] = ["N"]*len(df_wifipos)
@@ -45,7 +55,7 @@ def TrackRestore(df,df_wifipos):
 
     #-----------数据评估 -切换次数 -切换时间 -切换距离 -切换速度-----------
     df_insight = TrackCleaner.InsightTrack(df,df_wifipos)
-    df_insight.to_csv("../wifi_track_data/dacang/temp_data/processing_data/insight_epoch{epoch}_{date}.csv",index=False)
+    df_insight.to_csv(_DACANG / "temp_data" / "processing_data" / f"insight_epoch{epoch}_{date}.csv", index=False)
     #df_insight = pd.read_csv(os.getcwd()+f"/wifi_track_data/dacang/track_data/processing_data/insight_3_epoch{epoch}_1217.csv")
     
     enforce_count_thre,count_thre,time_thre,distance_thre,speed_thre = TrackCleaner.AutoGetThreshold(df_insight)
@@ -75,7 +85,7 @@ def TrackRestore(df,df_wifipos):
     if newTracker_count == 0:
         return newTracker_count,'',''
     print(f"新生成虚拟探针：{newTracker_count}个")
-    df_wifiposNew.to_csv("../wifi_track_data/dacang/temp_data/processing_data/wifiposNew_needRestore_epoch{epoch}_{date}.csv",index=False)
+    df_wifiposNew.to_csv(_DACANG / "temp_data" / "processing_data" / f"wifiposNew_needRestore_epoch{epoch}_{date}.csv", index=False)
     
     
     #-----------替换跳动轨迹-----------
@@ -96,7 +106,7 @@ def TrackRestore(df,df_wifipos):
         return 0,'',''
     
     df = df_new.copy()
-    df.to_csv("../wifi_track_data/dacang/temp_data/processing_data/dacang_track_data_epoch{epoch}_{date}.csv",index=False)
+    df.to_csv(_DACANG / "temp_data" / "processing_data" / f"dacang_track_data_epoch{epoch}_{date}.csv", index=False)
 
     print(f"epoch{epoch}完成")
     print(f"完成时间{str(datetime.now())}")
@@ -136,7 +146,7 @@ with tqdm(total=len(df_wifipos),desc="还原虚拟探针至路径点") as pbar:
                 ind = index2
         df_wifipos.at[index,'restored_x'] = df_poten.at[ind,'X']
         df_wifipos.at[index,'restored_y'] = df_poten.at[ind,'Y']
-df_wifipos.to_csv("../wifi_track_data/dacang/pos_data/processing_data/wifiposNew_restored_{date}.csv",index=False)
+df_wifipos.to_csv(_DACANG / "pos_data" / "processing_data" / f"wifiposNew_restored_{date}.csv", index=False)
 
 #-----------合并重复探针-----------
     
@@ -157,7 +167,7 @@ with tqdm(total=len(df_wifipos),desc="合并重复探针") as pbar:
                     df_wifipos.at[index,'children'] = ""
                 df_wifipos.at[index,'children'] = df_wifipos.at[index,'children'] + (str(row_now.wifi)+':')
 df_wifipos = df_wifipos[df_wifipos.activated == 1].reset_index().drop('index',axis=1)
-df_wifipos.to_csv("../wifi_track_data/dacang/pos_data/wifi_pos_new_{date}.csv",index=False)
+df_wifipos.to_csv(_DACANG / "pos_data" / f"wifi_pos_new_{date}.csv", index=False)
 
 #-----------删除重复探针-----------
 #df_wifipos = pd.read_csv(r'wifi_track_data\dacang\pos_data\wifi_pos_merged_3_1218.csv')
@@ -178,7 +188,7 @@ with tqdm(total=len(mac_list),desc="删除重复探针") as pbar:
         if len(df_now)>2:
             df_now = utils.DeleteRepeatTrack(df_now)
         df_new = pd.concat([df_new,df_now],axis=0)
-df_new.to_csv("../wifi_track_data/dacang/temp_data/processing_data/dacang_track_data_repeateDeleted_{date}.csv",index=False)
+df_new.to_csv(_DACANG / "temp_data" / "processing_data" / f"dacang_track_data_repeateDeleted_{date}.csv", index=False)
 df = df_new
 print(f"当前数据量:{len(df)}")
 
@@ -196,5 +206,5 @@ with tqdm(total=len(mac_list),desc="清除漂移轨迹") as pbar:
         df_now = utils.DeleteDriftingTrack(df_now)
         df_new = pd.concat([df_new,df_now],axis=0)
 df = df_new
-df.to_csv("../wifi_track_data/dacang/track_data/dacang_track_data_final_{date}.csv",index=False)
+df.to_csv(_DACANG / "track_data" / f"dacang_track_data_final_{date}.csv", index=False)
 

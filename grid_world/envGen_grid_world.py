@@ -7,8 +7,7 @@ from utils_tool import utils
 from DMEIRL.value_iteration import value_iteration
 import torch
 import torch.nn as nn
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cuda:0")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 from PIL import Image
 import os
 from tqdm import tqdm
@@ -42,11 +41,9 @@ class GridWorld_envGen(GridWorld):
         self.height = height
 
         model = DeepMEIRL_FC(n_input=model_n_input,layers=model_layers)
+        model.load_state_dict(torch.load(model_path, map_location=device))
         model.to(device)
-        model.load_state_dict(torch.load(model_path,map_location='cuda:0'))
-        # model.load_state_dict(torch.load(model_path,map_location='cup'))
         model.eval()
-        model.cuda()
         self.model = model
 
         super().__init__(width=width,height=height,
@@ -174,7 +171,7 @@ class GridWorld_envGen(GridWorld):
         return self.state
 
     def GenerateTrajs(self,traj_count,traj_length,save = False):
-        reward = torch.from_numpy(self.reward_now).to('cuda:0')
+        reward = torch.from_numpy(self.reward_now).to(device)
         policy = value_iteration(0.0001,self,reward,self.discount).argmax(1)
         policy = policy.cpu().numpy()
         trajs = []

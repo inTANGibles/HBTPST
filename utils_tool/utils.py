@@ -285,6 +285,35 @@ def _getPath(start,end,df_path):
                 return [x for x in row[1:] if str(x) != 'nan']
         return None
 
+def ListProbeTransitionPaths(df_now, df_path):
+    """
+    列出相邻记录中每一次换探针的 (start, end)，以及在 df_path 中 _getPath 是否命中、折点个数。
+    与 GetPathPointsWithUniformDivide / GetPathPoints 在换探针时使用的 (start, end) 一致。
+    """
+    rows = []
+    for pos in range(1, len(df_now)):
+        prev = df_now.iloc[pos - 1]
+        curr = df_now.iloc[pos]
+        if prev.a == curr.a:
+            continue
+        path_points = _getPath(prev.a, curr.a, df_path)
+        ok = path_points is not None and len(path_points) > 0
+        n = len(path_points) if path_points else 0
+        t0 = prev.t.hour + prev.t.minute / 60.0
+        t1 = curr.t.hour + curr.t.minute / 60.0
+        rows.append(
+            {
+                "row_to": pos,
+                "start": prev.a,
+                "end": curr.a,
+                "t_start_h": t0,
+                "t_end_h": t1,
+                "path_in_df_path": ok,
+                "n_path_vertices": n,
+            }
+        )
+    return pd.DataFrame(rows)
+
 def GetPathPoints(df_now,df_wifipos,df_path):
     '''
     return all points of the incoming df_now's path
@@ -297,7 +326,7 @@ def GetPathPoints(df_now,df_wifipos,df_path):
     def _append_path(df_path,start,end,start_time,end_time):
         path_points = _getPath(start,end,df_path)
         
-        if len(path_points) == 0:
+        if path_points is None or len(path_points) == 0:
             return
         length = len(path_points)
         for i,point in enumerate(path_points):
@@ -333,7 +362,7 @@ def GetPathPointsWithUniformDivide(df_now,df_wifipos,df_path):
         if matched_df.empty:
             return
         first_row = matched_df.iloc[0]
-        gap = 10/60
+        gap =10/60
         inter_num = math.ceil((end_time-start_time)/gap)
         for i in range(1,inter_num):
             z.append(start_time + (i+1)*gap)

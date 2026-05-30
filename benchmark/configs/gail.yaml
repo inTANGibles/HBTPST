@@ -1,0 +1,36 @@
+seed: 110
+
+paths:
+  expert_csv: wifi_track_data/dacang/track_data/trajs_sliced_513_40x30.csv
+  env_img_folder: wifi_track_data/dacang/grid_data/env_imgs/40_30
+
+grid:
+  width: 40
+  height: 30
+  discount: 0.95
+  trans_prob: 0.8
+  traj_length_bias: 0
+
+gail:
+  n_iters: 150
+  n_d_steps: 2
+  batch_size: 512
+  rollout_trajs: 32
+  rollout_horizon: 24
+  lr_policy: 0.0003
+  lr_disc: 0.0003
+  gamma: 0.95
+  entropy_coef: 0.01
+  policy_hidden: [128, 128]
+  disc_hidden: [256, 256]
+
+rollout:
+  horizon: null
+  n_trajs: null
+
+svf_transport:
+  sinkhorn_reg: 0.03
+  sinkhorn_iter: 300
+
+output:
+  root: benchmark/outputs

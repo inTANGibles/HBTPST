@@ -132,21 +132,22 @@ class DMEIRL:
             
             
 
-            #save model
-            if save:
-                if last_mse>mse:
-                    self.SyncModel_MinMse(i,mse)
-                    last_mse = mse
-                    best_reward = reward
-                    best_iter=i
-                if last_max>max:
-                    self.SyncModel_MinMax(i,max)
-                    last_max = max
+            # best SVF MSE (always track); checkpoints only when save
+            if last_mse > mse:
+                if save:
+                    self.SyncModel_MinMse(i, mse)
+                last_mse = mse
+                best_reward = reward
+                best_iter = i
+            if save and last_max > max:
+                self.SyncModel_MinMax(i, max)
+                last_max = max
 
             with torch.no_grad():
                 reward = self.model.forward(self.features).flatten()
 
-        return best_reward.detach().cpu().numpy(),best_iter,self.rewards
+        best_mse = float(last_mse.item()) if torch.is_tensor(last_mse) else float(last_mse)
+        return best_reward.detach().cpu().numpy(), best_iter, self.rewards, best_mse
 
     def StateVisitationFrequency(self):
         svf = torch.zeros(self.world.n_states_active,dtype=torch.float32).to(device)

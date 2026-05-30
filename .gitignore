@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Jupyter notebook outputs (keep source, avoid huge blobs)
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+
+# Large temporary datasets (GitHub 100MB hard limit)
+wifi_track_data/dacang/temp_data/dacang_track_data_dateLabeled.csv
+wifi_track_data/dacang/temp_data/dacang_track_data_dateLabeled.csv.local
+
+# Benchmark run outputs
+benchmark/outputs/*
+!benchmark/outputs/.gitignore

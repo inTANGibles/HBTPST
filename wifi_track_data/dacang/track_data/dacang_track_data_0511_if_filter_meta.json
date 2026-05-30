@@ -1,0 +1,24 @@
+{
+  "reference": "Wang et al., 2026, Architectural Intelligence (Fig. 4; 2.1.1 step 3)",
+  "method": "IsolationForest",
+  "contamination": 0.1,
+  "if_sample_unit": "calender × oriMac (one feature row per day per MAC)",
+  "feature_columns": [
+    "occurrence_frequency_count",
+    "avg_active_timestamp_h",
+    "movement_distances_m_log10",
+    "med_active_timestamp_h",
+    "durations_h"
+  ],
+  "time_model": "t_abs = calender*86400 + hour*3600; avg/med active timestamps are clock-of-day in [0,24) h (circular mean for avg when hour span>12); order by seq; path from x,y",
+  "input_csv": "wifi_track_data\\dacang\\track_data\\dacang_track_data_0511.csv",
+  "output_filtered_csv": "wifi_track_data\\dacang\\track_data\\dacang_track_data_0511_if_filtered.csv",
+  "output_labels_csv": "wifi_track_data\\dacang\\track_data\\dacang_track_data_0511_if_traj_labels.csv",
+  "rows_before_low_move_log_drop": 294283,
+  "traj_before_low_move_log_drop": 1397,
+  "n_dropped_traj_low_move_log": 4,
+  "n_rows_in": 294092,
+  "n_rows_out": 251837,
+  "n_traj_in": 1393,
+  "n_traj_out": 1253
+}

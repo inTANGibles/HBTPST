@@ -49,14 +49,17 @@ dependencies:
       - nest-asyncio==1.6.0
       - networkx==3.2.1
       - numpy==2.0.2
+      - optuna==3.6.1
       - packaging==24.2
       - pandas==2.2.3
       - parso==0.8.4
       - pillow==11.0.0
       - platformdirs==4.3.6
+      - kaleido==0.2.1
       - plotly==5.24.1
       - prompt-toolkit==3.0.48
       - protobuf==5.28.3
+      - pyyaml==6.0.2
       - psutil==6.1.0
       - pure-eval==0.2.3
       - pygments==2.18.0
@@ -87,4 +90,3 @@ dependencies:
       - wcwidth==0.2.13
       - werkzeug==3.1.3
       - zipp==3.21.0
-prefix: D:\STUDY\anaconda3\envs\meirlenv
